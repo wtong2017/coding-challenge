@@ -16,8 +16,8 @@
         var margin = { top: 100, right: 50, bottom: 80, left: 80 },
             width = 960 - margin.left - margin.right,
             height = 600 - margin.top - margin.bottom,
-            gridHeight = height / 11, // there are 12 months in a year
-            gridMargin = { top: 5, right: 5, bottom: 5, left: 5 },
+            gridHeight = height / 12, // there are 12 months in a year
+            gridMargin = { top: 3, right: 3, bottom: 3, left: 3 },
             legendSize = { height: 20, width: 150}
             months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
@@ -96,14 +96,14 @@
             var xRange = d3.extent(data.map(e => e.year));
             var minTemp = d3.min(_data.map(e => e.value.avg_min));
             var maxTemp = d3.max(_data.map(e => e.value.avg_max));
-            var gridWidth = width / (xRange[1] - xRange[0]);
-            xScale.domain(xRange).range([gridWidth/2, width]);
-            yScale.domain(months).range([gridHeight/2, height]);
+            var gridWidth = width / (xRange[1] - xRange[0] + 1);
+            xScale.domain(xRange).range([gridWidth/2, width - gridWidth/2]);
+            yScale.domain(months).range([gridHeight/2, height - gridHeight/2]);
             color.domain([maxTemp, minTemp]);
             colorScale.domain(color.domain()).range([legendSize.width, 0]);
 
             g.append("g")
-                .call(d3.axisTop(xScale).tickFormat(d3.format("d")));
+                .call(d3.axisTop(xScale).ticks(xRange[1] - xRange[0] + 1, d3.format("d")));
 
             g.append("g")
                 .call(d3.axisLeft(yScale));
