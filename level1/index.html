@@ -9,8 +9,8 @@
 </head>
 <body>
     <div id="chart"></div>
-    <button onclick="update('max')">Max</button>
-    <button onclick="update('min')">Min</button>
+    <button onclick="showMax()">Max</button>
+    <button onclick="showMin()">Min</button>
     <a href="../index.html">Back</a>
     <script>
         var margin = { top: 100, right: 50, bottom: 80, left: 80 },
@@ -127,27 +127,22 @@
                 .call(d3.axisBottom(colorScale));
         })
 
-        function update(mode) {
-            switch (mode) {
-                case "max":
-                    title.text("Average Maximum Monthly Temperature of Hong Kong");
-                    grids
-                        .on('mouseover', function(d) {
-                            tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. max: " + d.value.avg_max.toFixed(1));
-                        })
-                        .transition().attr("fill", d => color(d.value.avg_max));
-                    break;
-                case "min":
-                    title.text("Average Minimum Monthly Temperature of Hong Kong");
-                    grids
-                        .on('mouseover', function(d) {
-                            tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. min: " + d.value.avg_min.toFixed(1));
-                        })
-                        .transition().attr("fill", d => color(d.value.avg_min));
-                    break;
-                default:
-                    break;
-            }
+        function showMax() {
+            title.text("Average Maximum Monthly Temperature of Hong Kong");
+            grids
+                .on('mouseover', function(d) {
+                    tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. max: " + d.value.avg_max.toFixed(1));
+                })
+                .transition().attr("fill", d => color(d.value.avg_max));
+        }
+
+        function showMin() {
+            title.text("Average Minimum Monthly Temperature of Hong Kong");
+            grids
+                .on('mouseover', function(d) {
+                    tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. min: " + d.value.avg_min.toFixed(1));
+                })
+                .transition().attr("fill", d => color(d.value.avg_min));
         }
     </script>
 </body>
