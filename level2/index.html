@@ -33,8 +33,9 @@
         // define axis
         var xScale = d3.scaleLinear(); // Year
         var yScale = d3.scalePoint(); // Month
-        var colorScale = d3.scaleLinear();
-        var zScale = d3.scaleLinear(); // Day
+        var colorScale = d3.scaleLinear(); // Color legend
+        var zScale = d3.scaleBand().padding(0.2); // Day
+        var wScale = d3.scaleLinear(); // Temperature
         
         var color = d3.scaleSequential(d3.interpolateRdBu);
 
@@ -102,6 +103,9 @@
             var formatTime = d3.timeFormat("%Y-%m");
             data.forEach(element => {
                 var date = parseTime(element.date);
+                // NOTE: change to temperature to int from string
+                element.min_temperature = parseInt(element.min_temperature, 10);
+                element.max_temperature = parseInt(element.max_temperature, 10);
                 element.year = date.getFullYear();
                 element.month = months[date.getMonth()];
                 element.day = date.getDate();
@@ -113,8 +117,8 @@
                     return {
                         "month": d[0].month, 
                         "year": d[0].year, 
-                        "avg_min": d3.sum(d, function(d) {return d.min_temperature;}) / d.length, 
-                        "avg_max": d3.sum(d, function(d) {return d.max_temperature;}) / d.length, 
+                        "avg_min": d3.mean(d, function(d) {return d.min_temperature;}), 
+                        "avg_max": d3.mean(d, function(d) {return d.max_temperature;}), 
                         "daily": d.map(e => {
                             return {
                                 "day": e.day,
@@ -135,28 +139,68 @@
             var minTemp = d3.min(_data.map(e => e.value.avg_min));
             var maxTemp = d3.max(_data.map(e => e.value.avg_max));
             var gridWidth = width / (xRange[1] - xRange[0] + 1);
+            var wMin =  d3.min(_data.map(e => d3.min(e.value.daily.map(f => f.min))));
+            var wMax = d3.max(_data.map(e => d3.max(e.value.daily.map(f => f.max))));
             xScale.domain(xRange).range([gridWidth/2, width - gridWidth/2]);
             yScale.domain(months).range([gridHeight/2, height - gridHeight/2]);
             color.domain([maxTemp, minTemp]);
             colorScale.domain(color.domain()).range([legendSize.width, 0]);
+            zScale.domain(d3.range(1,32)).range([0, gridWidth - gridMargin.left - gridMargin.right]);
+            // const reducer = (accumulator, currentValue) => [Math.min(accumulator[0], currentValue[0]), Math.max(accumulator[1], currentValue[1])];
+            wScale.domain([wMin, wMax]).range([gridHeight - gridMargin.top - gridMargin.bottom, 0]);
 
             xAxis.call(d3.axisTop(xScale).ticks(xRange[1] - xRange[0] + 1, d3.format("d")));
             yAxis.call(d3.axisLeft(yScale));
 
             // Create grids
-            gridsG.selectAll("rect")
+            var gridsGG = gridsG.selectAll("g")
                 .data(_data)
-                .enter().append("rect")
-                .attr("x", d => xScale(d.value.year) - gridWidth / 2 + gridMargin.left)
-                .attr("y", d => yScale(d.value.month) - gridHeight / 2 + gridMargin.top)
+                .enter()
+                .append("g")
+                .attr("class", "grid")
+                .attr("transform", d => "translate(" + (xScale(d.value.year) - gridWidth / 2 + gridMargin.left) + "," + (yScale(d.value.month) - gridHeight / 2 + gridMargin.top) + ")");
+
+            // Heatmap for level 1
+            gridsGG.append("rect")
+                .attr("class", "heatmap")
                 .attr("width", gridWidth - gridMargin.left - gridMargin.right)
                 .attr("height", gridHeight - gridMargin.top - gridMargin.bottom)
                 .attr("fill", d => color(mode === "max" ? d.value.avg_max : d.value.avg_min))
-                .on('mouseover', function(d) {
+                .on("mouseover", function(d) {
                     tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. " + mode + ": " + (mode === "max" ? d.value.avg_max.toFixed(1) : d.value.avg_min.toFixed(1)));
                 })
                 .on("mousemove", function(){return tooltip.style("top", (event.pageY-12)+"px").style("left",(event.pageX+12)+"px");})
                 .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
+            
+            // New chart for level 2
+            // NOTE: There are some missing data
+            // gridsGG.append("g").attr("transform", "translate(0," + (gridHeight - gridMargin.top - gridMargin.bottom) + ")").call(d3.axisBottom(zScale)); // For debug
+            // gridsGG.append("g").call(d3.axisLeft(wScale)); // For debug
+            gridsGG.append("g")
+                .attr("class", "max")
+                .selectAll("rect")
+                .data(function (d) { return d.value.daily; })
+                .enter()
+                .append("rect")
+                .attr("fill", "black")
+                // .style("opacity", .8)
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.max); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
+
+            gridsGG.append("g")
+                .attr("class", "min")
+                .selectAll("rect")
+                .data(function (d) { return d.value.daily; })
+                .enter()
+                .append("rect")
+                .attr("fill", "white")
+                // .style("opacity", .8)
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.min); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
             
             colorAxis.call(d3.axisBottom(colorScale));
         })
@@ -164,8 +208,8 @@
         function showMax() {
             mode = "max"
             title.text("Average Maximum Monthly Temperature of Hong Kong");
-            gridsG.selectAll("rect")
-                .on('mouseover', function(d) {
+            gridsG.selectAll("rect.heatmap")
+                .on("mouseover", function(d) {
                     tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. max: " + d.value.avg_max.toFixed(1));
                 })
                 .transition().attr("fill", d => color(d.value.avg_max));
@@ -174,8 +218,8 @@
         function showMin() {
             mode = "min";
             title.text("Average Minimum Monthly Temperature of Hong Kong");
-            gridsG.selectAll("rect")
-                .on('mouseover', function(d) {
+            gridsG.selectAll("rect.heatmap")
+                .on("mouseover", function(d) {
                     tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. min: " + d.value.avg_min.toFixed(1));
                 })
                 .transition().attr("fill", d => color(d.value.avg_min));
@@ -185,38 +229,92 @@
             var _data = _dataNested.filter(function (d) { return d.value.year > (d3.max(_dataNested.map(e => e.value.year)) - lastYear) });
             console.log(_data);
 
+            // Update axis
             var xRange = d3.extent(_data.map(e => e.value.year));
             var minTemp = d3.min(_data.map(e => e.value.avg_min));
             var maxTemp = d3.max(_data.map(e => e.value.avg_max));
             var gridWidth = width / (xRange[1] - xRange[0] + 1);
+            var wMin =  d3.min(_data.map(e => d3.min(e.value.daily.map(f => f.min))));
+            var wMax = d3.max(_data.map(e => d3.max(e.value.daily.map(f => f.max))));
             xScale.domain(xRange).range([gridWidth/2, width - gridWidth/2]);
             yScale.domain(months).range([gridHeight/2, height - gridHeight/2]);
             color.domain([maxTemp, minTemp]);
-            colorScale.domain([maxTemp, minTemp]).range([legendSize.width, 0]);
+            colorScale.domain(color.domain()).range([legendSize.width, 0]);
+            zScale.domain(d3.range(1,32)).range([0, gridWidth - gridMargin.left - gridMargin.right]);
+            // const reducer = (accumulator, currentValue) => [Math.min(accumulator[0], currentValue[0]), Math.max(accumulator[1], currentValue[1])];
+            wScale.domain([wMin, wMax]).range([gridHeight - gridMargin.top - gridMargin.bottom, 0]);
 
             xAxis.call(d3.axisTop(xScale).ticks(xRange[1] - xRange[0] + 1, d3.format("d")));
             yAxis.call(d3.axisLeft(yScale));
 
             // Join
-            var grids = gridsG.selectAll("rect")
+            var grids = gridsG.selectAll("g.grid")
                 .data(_data)
 
-            // Enter + Update
-            grids.enter().append("rect")
-                .attr("x", d => xScale(d.value.year) - gridWidth / 2 + gridMargin.left)
-                .attr("y", d => yScale(d.value.month) - gridHeight / 2 + gridMargin.top)
+            // Enter
+            var gridsGG = grids.enter().append("g")
+                .attr("class", "grid")
+                .attr("transform", d => "translate(" + (xScale(d.value.year) - gridWidth / 2 + gridMargin.left) + "," + (yScale(d.value.month) - gridHeight / 2 + gridMargin.top) + ")")
+
+            // Heatmap
+            gridsGG.append("rect")
+                .attr("class", "heatmap")
+                .attr("width", gridWidth - gridMargin.left - gridMargin.right)
+                .attr("height", gridHeight - gridMargin.top - gridMargin.bottom)
+                .attr("fill", d => color(mode === "max" ? d.value.avg_max : d.value.avg_min))
                 .on('mouseover', function(d) {
                     tooltip.style("visibility", "visible").text("Date: " + d.key + " Avg. " + mode + ": " + (mode === "max" ? d.value.avg_max.toFixed(1) : d.value.avg_min.toFixed(1)));
                 })
                 .on("mousemove", function(){return tooltip.style("top", (event.pageY-12)+"px").style("left",(event.pageX+12)+"px");})
-                .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
-                .merge(grids)
+                .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+            // Daily
+            gridsGG.append("g")
+                .attr("class", "min")
+                .selectAll("rect")
+                .data(function (d) { return d.value.daily; })
+                .enter()
+                .append("rect")
+                .attr("fill", "white")
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.min); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
+
+            gridsGG.append("g")
+                .attr("class", "max")
+                .selectAll("rect")
+                .data(function (d) { return d.value.daily; })
+                .enter()
+                .append("rect")
+                .attr("fill", "black")
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.max); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
+            
+            // Update
+            grids.merge(grids)
                 .transition()
-                .attr("x", d => xScale(d.value.year) - gridWidth / 2 + gridMargin.left)
-                .attr("y", d => yScale(d.value.month) - gridHeight / 2 + gridMargin.top)
+                .attr("transform", d => "translate(" + (xScale(d.value.year) - gridWidth / 2 + gridMargin.left) + "," + (yScale(d.value.month) - gridHeight / 2 + gridMargin.top) + ")")
+                .selectAll("rect.heatmap")
                 .attr("width", gridWidth - gridMargin.left - gridMargin.right)
                 .attr("height", gridHeight - gridMargin.top - gridMargin.bottom)
-                .attr("fill", d => color(mode === "max" ? d.value.avg_max : d.value.avg_min));
+                .attr("fill", d => color(mode === "max" ? d.value.avg_max : d.value.avg_min))
+
+            grids.selectAll("g.max").selectAll("rect")
+                .attr("fill", "black")
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.max); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
+
+            grids.selectAll("g.min").selectAll("rect")
+                .attr("fill", "white")
+                .attr("x", function(d) { return zScale(d.day); })
+                .attr("y", function(d) { return wScale(d.min); })
+                .attr("width", zScale.bandwidth())
+                .attr("height", 3);
             
             // Remove
             grids.exit().transition().remove();
