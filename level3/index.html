@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Level 3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+    <div id="chart"></div>
+    <a href="../index.html">Back</a>
+
+    <script>
+        var margin = { top: 100, right: 50, bottom: 80, left: 80 },
+            width = 960 - margin.left - margin.right,
+            height = 600 - margin.top - margin.bottom;
+        
+        var svg = d3.select("#chart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom);
+
+        var g = svg.append("g");
+
+        var zoom = d3.zoom()
+            .on("zoom", function() { g.attr("transform", d3.event.transform); });
+        
+        svg.call(zoom);
+
+        var color = d3.scaleOrdinal(d3.schemePaired);
+
+        var simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(function(link) {
+                return 1 / link.publications.length / 10;
+            }))
+            .force("charge", d3.forceManyBody())
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(function(d) {
+                return d.collaborators.length + 5;
+            }));
+
+        d3.json("../HKUST_coauthor_graph.json").then(function(rawData) {
+            // get data from csv
+            console.log(rawData)
+
+            // Data preprocessing
+            var cseID = rawData.nodes.filter(e => e.dept === "CSE").map(e => e.id);
+            var data = {
+                nodes: rawData.nodes.filter(e => e.dept === "CSE"),
+                edges: rawData.edges.filter(e => cseID.indexOf(e.source) > 0 && cseID.indexOf(e.target) > 0)
+            }
+            data.nodes.map(e => {
+                e.collaborators = data.edges.filter(f => f.source === e.id || f.target === e.id).map(f => f.target === e.id ? f.source: f.target);
+            })
+
+            var depts = Array.from(new Set(data.nodes.map(e => e.dept)));
+            color.domain(depts);
+            
+            var link = g.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(data.edges)
+                .enter().append("line")
+                .attr("stroke", "grey")
+                .attr("stroke-width", 1);
+
+            var node = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(data.nodes)
+                .enter().append("g")
+                
+            var circles = node.append("circle")
+                .attr("r", function(d) { return d.collaborators.length + 5; })
+                .attr("fill", "green")
+                .attr("stroke", "white")
+                .attr("stroke-width", 1);
+
+            // var lables = node.append("text")
+            //     .text(function(d) {
+            //         return d.id;
+            //     })
+            //     .attr('x', 6)
+            //     .attr('y', 3);
+
+            node.append("title")
+                .text(function(d) { return d.label; });
+
+            simulation
+                .nodes(data.nodes)
+                .on("tick", ticked);
+
+            simulation.force("link")
+                .links(data.edges);
+
+            function ticked() {
+                link
+                    .attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+
+                node
+                    .attr("transform", function(d) {
+                        return "translate(" + d.x + "," + d.y + ")";
+                    })
+            }
+        })
+    </script>
+</body>
+</html>
