@@ -6,38 +6,91 @@
     <title>Level 3</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <style>
+        #node-link {
+            float: left;
+        }
+        #matrix {
+            float: left;
+        }
+    </style>
 </head>
 <body>
-    <div id="chart"></div>
+    <div id="node-link">
+        <p>Can zoom and pan</p>
+    </div>
+    <div id="matrix"></div>
+    <button id="sort">Sort</button>
     <a href="../index.html">Back</a>
 
     <script>
-        var margin = { top: 100, right: 50, bottom: 80, left: 80 },
-            width = 960 - margin.left - margin.right,
-            height = 600 - margin.top - margin.bottom;
-        
-        var svg = d3.select("#chart").append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom);
+        var nodeLinkMargin = { top: 10, right: 10, bottom: 10, left: 10 },
+            nodeLinkWidth = 500 - nodeLinkMargin.left - nodeLinkMargin.right,
+            nodeLinkHeight = 500 - nodeLinkMargin.top - nodeLinkMargin.bottom;
 
-        var g = svg.append("g");
+        // Node-link diagram
+        var nodeLinkSvg = d3.select("#node-link").append("svg")
+            .attr("width", nodeLinkWidth + nodeLinkMargin.left + nodeLinkMargin.right)
+            .attr("height", nodeLinkHeight + nodeLinkMargin.top + nodeLinkMargin.bottom);
+
+        var g = nodeLinkSvg.append("g")
+            .attr("transform", "translate(" + nodeLinkMargin.left + "," + nodeLinkMargin.top + ")");
 
         var zoom = d3.zoom()
             .on("zoom", function() { g.attr("transform", d3.event.transform); });
         
-        svg.call(zoom);
-
-        var color = d3.scaleOrdinal(d3.schemePaired);
+        nodeLinkSvg.call(zoom);
 
         var simulation = d3.forceSimulation()
             .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(function(link) {
                 return 1 / link.publications.length / 10;
             }))
             .force("charge", d3.forceManyBody())
-            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("center", d3.forceCenter(nodeLinkWidth / 2, nodeLinkHeight / 2))
             .force('collision', d3.forceCollide().radius(function(d) {
                 return d.collaborators.length + 5;
             }));
+
+        // Matrix view
+        var matrixMargin = { top: 150, right: 100, bottom: 10, left: 150 },
+            matrixWidth = 800 - matrixMargin.left - matrixMargin.right,
+            matrixHeight = 800 - matrixMargin.top - matrixMargin.bottom;
+        var legendSize = { height: 150, width: 20};
+        var matrixSvg = d3.select("#matrix").append("svg")
+            .attr("width", matrixWidth + matrixMargin.left + matrixMargin.right)
+            .attr("height", matrixHeight + matrixMargin.top + matrixMargin.bottom);
+        
+        var matrixG = matrixSvg.append("g")
+            .attr("transform", "translate(" + matrixMargin.left + "," + matrixMargin.top + ")");
+
+        var color = d3.scaleSequential(d3.interpolateBlues);
+
+        var nameScale = d3.scaleBand();
+        var idScale = d3.scaleBand();
+        var colorScale = d3.scaleLinear();
+
+        // Create legeng
+        var defs = matrixSvg.append("defs");
+        defs.append("linearGradient")
+            // Vertical gradient
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "0%")
+            .attr("y2", "100%")
+            .attr("id", "linear-gradient")
+            .selectAll("stop")
+            .data(color.ticks().reverse().map((t, i, n) => ({ offset: i/n.length, color: color(t) })))
+            .enter().append("stop")
+            .attr("offset", d => d.offset)
+            .attr("stop-color", d => d.color);
+        var legend = matrixG.append('g')
+            .attr("transform", "translate("+(matrixWidth + 10 + legendSize.width)+",0)")
+        legend.append("rect")
+            .attr("width", legendSize.width)
+            .attr("height", legendSize.height)
+            .style("fill", "url(#linear-gradient)");
+        var colorAxis = legend.append('g').attr("transform", "translate(" + legendSize.width + ",0)");
 
         d3.json("../HKUST_coauthor_graph.json").then(function(rawData) {
             // get data from csv
@@ -47,14 +100,27 @@
             var cseID = rawData.nodes.filter(e => e.dept === "CSE").map(e => e.id);
             var data = {
                 nodes: rawData.nodes.filter(e => e.dept === "CSE"),
-                edges: rawData.edges.filter(e => cseID.indexOf(e.source) > 0 && cseID.indexOf(e.target) > 0)
+                edges: rawData.edges.filter(e => cseID.indexOf(e.source) >= 0 && cseID.indexOf(e.target) >= 0)
             }
+            var noNameCount = 0
             data.nodes.map(e => {
-                e.collaborators = data.edges.filter(f => f.source === e.id || f.target === e.id).map(f => f.target === e.id ? f.source: f.target);
+                if (!e.fullname) {
+                    e.fullname = "No Name " + noNameCount;
+                    noNameCount++;
+                }
+                e.collaborators = data.edges.filter(f => f.source === e.id || f.target === e.id).map(f => {
+                    var cObj = {};
+                    if (f.target === e.id) {
+                        cObj.id = f.source;
+                    }
+                    else {
+                        cObj.id = f.target;
+                    }
+                    cObj.publications = f.publications;
+                    return cObj;
+                });
             })
-
-            var depts = Array.from(new Set(data.nodes.map(e => e.dept)));
-            color.domain(depts);
+            console.log(data)
             
             var link = g.append("g")
                 .attr("class", "links")
@@ -74,7 +140,9 @@
                 .attr("r", function(d) { return d.collaborators.length + 5; })
                 .attr("fill", "green")
                 .attr("stroke", "white")
-                .attr("stroke-width", 1);
+                .attr("stroke-width", 1)
+                .on("mouseover", nodeLinkHighlight())
+                .on("mouseout", nodeLinkReset);
 
             // var lables = node.append("text")
             //     .text(function(d) {
@@ -84,7 +152,7 @@
             //     .attr('y', 3);
 
             node.append("title")
-                .text(function(d) { return d.label; });
+                .text(function(d) { return d.fullname; });
 
             simulation
                 .nodes(data.nodes)
@@ -105,6 +173,122 @@
                         return "translate(" + d.x + "," + d.y + ")";
                     })
             }
+
+            // Matrix view
+            var numRange = d3.extent(data.nodes.map(e => e.collaborators.length));
+            color.domain(numRange);
+
+            nameScale.domain(data.nodes.map(e => e.fullname)).range([0, matrixWidth]);
+            idScale.domain(data.nodes.map(e => e.id)).range([0, matrixWidth]);
+            colorScale.domain(color.domain()).range([legendSize.height, 0]);
+
+            var xAxis = matrixG.append("g");
+            xAxis.call(d3.axisTop(nameScale)).selectAll("text").style("text-anchor", "start").attr("transform", "translate(12,-10) rotate(-90)");
+            var yAxis = matrixG.append("g");
+            yAxis.call(d3.axisLeft(nameScale));
+            colorAxis.call(d3.axisRight(colorScale));
+
+            var matrixGG = matrixG.append("g")
+                .selectAll("g")
+                .data(data.nodes)
+                .enter()
+                // .append("g")
+                // .attr("transform", d => "translate(0,"+nameScale(d.fullname)+")")
+            var rects = matrixGG.selectAll("rect")
+                .data(d => { d.collaborators.forEach(e => e.source = d.id); return d.collaborators;})
+                .enter()
+                .append("rect")
+                .attr("x", d => idScale(d.id))
+                .attr("y", d => idScale(d.source))
+                .attr("width", nameScale.bandwidth())
+                .attr("height", nameScale.bandwidth())
+                .attr("fill", d => color(d.publications.length))
+                .on("mouseover", matrixHighlight())
+                .on("mouseout", matrixReset);
+            
+            // Handle sorting
+            // https://beta.observablehq.com/@mbostock/d3-sortable-bar-chart
+            var sortBtn = d3.select("button#sort").on("click", function() {
+                console.log("sort by name")
+                data.nodes.sort(sortByName);
+                // Update axis
+                nameScale.domain(data.nodes.map(e => e.fullname)).range([0, matrixWidth]);
+                idScale.domain(data.nodes.map(e => e.id)).range([0, matrixWidth]);
+
+                xAxis.transition().duration(750).delay((d, i) => i * 20).call(d3.axisTop(nameScale)).selectAll("text").style("text-anchor", "start").attr("transform", "translate(12,-10) rotate(-90)");
+                yAxis.transition().duration(750).delay((d, i) => i * 20).call(d3.axisLeft(nameScale));
+                rects
+                    .order()
+                    .transition()
+                    .duration(750)
+                    .delay((d, i) => i * 20)
+                    .attr("x", d => idScale(d.id))
+                    .attr("y", d => idScale(d.source));
+            });
+
+            function sortByName(a, b) {
+                return d3.ascending(a.fullname, b.fullname);
+            }
+
+            function nodeLinkHighlight() {
+                return function(d) {
+                    rects.style("opacity", e => e.id === d.id || e.source === d.id ? 1 : 0);
+                    node.style("stroke-opacity", function(e) {
+                        if (e.id === d.id) {
+                            return 1;
+                        }
+                        return d.collaborators.find(function(f) { return f.id === e.id }) === undefined ? 0.2 : 1;
+                    });
+                    node.style("fill-opacity", function(e) {
+                        if (e.id === d.id) {
+                            return 1;
+                        }
+                        return d.collaborators.find(function(f) { return f.id === e.id }) === undefined ? 0.2 : 1;
+                    });
+                    link.style("stroke-opacity", function(e) {
+                        return e.source.id === d.id || e.target.id === d.id ? 1 : 0.2;
+                    });
+                }
+            }
+
+            function nodeLinkReset() {
+                node.style("stroke-opacity", 1);
+                node.style("fill-opacity", 1);
+                link.style("stroke-opacity", 1);
+                rects.style("opacity", 1);
+            }
+
+            function matrixHighlight() {
+                return function(d) {
+                    rects.style("opacity", e => e.id === d.id && e.source === d.source ? 1 : 0);
+                    node.style("stroke-opacity", function(e) {
+                        if (e.id === d.id || e.id === d.source) {
+                            return 1;
+                        }
+                        return 0.2;
+                    });
+                    node.style("fill-opacity", function(e) {
+                        if (e.id === d.id || e.id === d.source) {
+                            return 1;
+                        }
+                        return 0.2;
+                    });
+                    link.style("stroke-opacity", function(e) {
+                        return e.source.id === d.id && e.target.id === d.source || e.source.id === d.source && e.target.id === d.id ? 1 : 0.2;
+                    });
+                    link.style("stroke-width", function(e) {
+                        return e.source.id === d.id && e.target.id === d.source || e.source.id === d.source && e.target.id === d.id ? 1 + e.publications.length : 1;
+                    });
+                }
+            }
+
+            function matrixReset() {
+                node.style("stroke-opacity", 1);
+                node.style("fill-opacity", 1);
+                link.style("stroke-width", 1)
+                link.style("stroke-opacity", 1);
+                rects.style("opacity", 1);
+            }    
         })
     </script>
 </body>
