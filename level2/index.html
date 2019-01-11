@@ -129,6 +129,10 @@
                     }
                 })
                 .entries(data);
+            // Sort it in descending order so that there will be no problem when we append the data later because the key of the data is using index (by default)
+            _dataNested.sort(function(x, y) {
+                return d3.descending(x.key, y.key);
+            })
             console.log(_dataNested);
 
             // Filter data for visualization
