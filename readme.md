@@ -1,3 +1,16 @@
+# How to run
+
+Please host a local server, e.g. using http-server ```npm i http-server```. 
+
+1. Run ```http-server``` in the foot folder.
+2. Open ```http://localhost:8080``` using web browser.
+
+For level 4, open ```level4/level4.ipynb``` using Jupyter Notebook.
+
+Justification:
+1. For level 1 and 2, I used another color scheme.
+2. For level 3, I used bar chart instead of line chart to display the daily temperature.
+
 # HKUST VisLab Coding Challenge
 
 Welcome to the coding challenge of VisLab! We have set a couple of challenges for you:
