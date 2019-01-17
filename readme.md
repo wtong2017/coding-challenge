@@ -7,6 +7,8 @@ Please host a local server, e.g. using http-server ```npm i http-server```.
 
 For level 4, open ```level4/level4.ipynb``` using Jupyter Notebook.
 
+For level 6, React + Redux and Flask are used as frontend and backend respectively. mongoDB is used for database. (WIP)
+
 Justification:
 1. For level 1 and 2, I used another color scheme.
 2. For level 3, I used bar chart instead of line chart to display the daily temperature.
