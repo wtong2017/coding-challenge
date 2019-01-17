@@ -1,12 +1,14 @@
 from flask import Flask, request
 from flask_restful import Api, Resource
 from flask_pymongo import PyMongo
+from flask_cors import CORS
 import crawler.api.stock as StockApi
  
 app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://admin:admin@coding-test-shard-00-00-9rcsg.mongodb.net:27017,coding-test-shard-00-01-9rcsg.mongodb.net:27017,coding-test-shard-00-02-9rcsg.mongodb.net:27017/test?ssl=true&replicaSet=coding-test-shard-0&authSource=admin&retryWrites=true"
 api = Api(app)
 mongo = PyMongo(app)
+CORS(app) # Solve cross domain problem: https://stackoverflow.com/questions/19962699/flask-restful-cross-domain-issue-with-angular-put-options-methods
 
 class StockList(Resource):
     def get(self):
@@ -30,7 +32,7 @@ class Stock(Resource):
             stock['daily_adjusted'] = result
             stock_id = mongo.db.stocks.insert_one(stock).inserted_id
             if stock_id is not None:
-                return dict(result='success', data=stock)
+                return dict(result='success', data=stock_id)
             return dict(result='error', message='Failed to insert')
 
 api.add_resource(StockList, '/list')
