@@ -1,32 +1,22 @@
-import React, { Component } from "react";
+import React from "react";
 import { connect } from "react-redux";
-import { getData } from "../actions/index";
-export class Post extends Component {
-  constructor() {
-    super();
-  }
-  componentDidMount() {
-    this.props.getData();
-  }
-  render() {
+import LineChart from "./charts/LineChart.jsx";
+
+const ConnectedList = ({ stock, detail }) => {
+    var dateList = detail ? Object.keys(detail['daily_adjusted']['data']) : []
+    dateList.sort()
     return (
-      <ul className="list-group list-group-flush">
-        {this.props.articles.map(el => (
-          <li className="list-group-item" key={el}>
-            {el}
-          </li>
-        ))}
-      </ul>
-    );
-  }
-}
-function mapStateToProps(state) {
-  console.log(state.remoteArticles);
-  return {
-    articles: state.remoteArticles.slice(0, 10)
-  };
-}
-export default connect(
-  mapStateToProps,
-  { getData }
-)(Post);
+        <div>
+            <h4>Selected stock is {stock}</h4>
+            <LineChart width={600} height={600} />
+            <ul>
+                {dateList.map((d, i) => <li key={i}>{d}</li>)}
+            </ul>
+        </div>
+    )
+};
+const mapStateToProps = state => {
+    return { stock: state.stock, detail: state.detail };
+};
+const Post = connect(mapStateToProps)(ConnectedList);
+export default Post;

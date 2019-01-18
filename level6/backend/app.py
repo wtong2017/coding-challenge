@@ -32,8 +32,8 @@ class Stock(Resource):
             stock['daily_adjusted'] = result
             stock_id = mongo.db.stocks.insert_one(stock).inserted_id
             if stock_id is not None:
-                return dict(result='success', data=stock_id)
-            return dict(result='error', message='Failed to insert')
+                return dict(result='success', data={'name': _name, 'daily_adjusted': result})
+            return dict(result='error', data=None)
 
 api.add_resource(StockList, '/list')
 api.add_resource(Stock, '/stock/<name>')
