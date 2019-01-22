@@ -9,6 +9,12 @@ For level 4, open ```level4/level4.ipynb``` using Jupyter Notebook.
 
 For level 6, React + Redux and Flask are used as frontend and backend respectively. mongoDB is used for database. (WIP)
 
+1. Go to folder ```level6/backend```, install required libraries by ```pip install -r requirements.txt``` (in virual python environment).
+2. Run ```python app.py``` to start the backend server.
+3. Go to folder ```../frontend```, install required modules by ```npm install```.
+4. Run ```npm start``` to start the frontend server.
+5. Open ```http://localhost:8080``` using web browser.
+
 Justification:
 1. For level 1 and 2, I used another color scheme.
 2. For level 3, I used bar chart instead of line chart to display the daily temperature.
