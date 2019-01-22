@@ -1,5 +1,5 @@
 import React from "react";
-import List from "./List.jsx";
+// import List from "./List.jsx";
 import Form from "./Form.jsx";
 import Post from "./Post.jsx";
 

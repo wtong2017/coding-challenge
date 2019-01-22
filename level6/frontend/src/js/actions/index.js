@@ -1,7 +1,10 @@
-import { DATA_LOADED, SELECT_STOCK, DETAIL_LOADED } from "../constants/action-types";
+import { DATA_LOADED, SELECT_STOCK, DETAIL_LOADED, SELECT_FUNC } from "../constants/action-types";
 
 export function selectStock(payload) {
-    return { type: SELECT_STOCK, payload };
+    return { type: SELECT_STOCK, payload: payload };
+}
+export function selectFunc(payload) {
+    return { type: SELECT_FUNC, payload: payload };
 }
 
 // API
@@ -17,10 +20,9 @@ export function getData() {
 }
 export function getDetail(payload) {
     return function (dispatch) {
-        return fetch(bser_url + "/stock" + "/" + payload)
+        return fetch(bser_url + "/stock/" + payload.func + "/" + payload.stock)
             .then(response => response.json())
             .then(json => {
-                console.log(json)
                 dispatch({ type: DETAIL_LOADED, payload: json.data });
             });
     };

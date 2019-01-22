@@ -59,7 +59,7 @@ class LineChart extends Component {
         var [x, y, xAxis, yAxis, line, path, parseTime] = this.chart;
 
         // Process data
-        var dataset = this.props.detail ? d3.entries(this.props.detail['daily_adjusted'].data) : [];
+        var dataset = this.props.detail ? d3.entries(this.props.detail.data) : [];
         dataset.forEach(d => {
             d.key = parseTime(d.key) // Str to Date
             for (var type in d.value) {
