@@ -43,7 +43,7 @@ class LineChart extends Component {
 
         var line = d3.line()
             .x(function (d) { return x(d.key); })
-            .y(function (d) { return y(d.value.low); });
+            .y(function (d) { return y(d.value.close); });
 
         var path = svg.append("path")
             .attr("fill", "none")
@@ -61,13 +61,17 @@ class LineChart extends Component {
         // Process data
         var dataset = this.props.detail ? d3.entries(this.props.detail['daily_adjusted'].data) : [];
         dataset.forEach(d => {
-            d.key = parseTime(d.key)
+            d.key = parseTime(d.key) // Str to Date
+            for (var type in d.value) {
+                if (!d.value.hasOwnProperty(type)) continue;
+                d.value[type] = Number(d.value[type]) // Str to Number
+            }
         });
         dataset.sort((a, b) => d3.ascending(a.key, b.key))
         
         // Udpate domain
-        x.domain(d3.extent(dataset.map(d => d.key)))
-        y.domain(d3.extent(dataset.map(d => d.value.low)))
+        x.domain(d3.extent(dataset, d => d.key))
+        y.domain(d3.extent(dataset, d => d.value.close))
 
         // Update axis
         xAxis.call(d3.axisBottom(x));
