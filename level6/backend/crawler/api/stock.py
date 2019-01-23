@@ -7,7 +7,7 @@ api_url_base = 'https://www.alphavantage.co/query?function=%s&symbol=%s&apikey=%
 
 api_function_map = {
     'intraday': {
-        'url': 'TIME_SERIES_INTRADAY',
+        'url': 'TIME_SERIES_INTRADAY&interval=5min',
         'result': 'Time Series (5min)'
     },
     'daily': {

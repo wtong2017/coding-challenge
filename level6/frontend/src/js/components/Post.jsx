@@ -12,9 +12,6 @@ const ConnectedList = ({ stock, detail, func }) => {
             <h4>Using function {API_FUNC_MAP[func].name},</h4>
             <h4>Selected stock is {stock}</h4>
             <LineChart width={600} height={600} />
-            <ul>
-                {dateList.map((d, i) => <li key={i}>{d}</li>)}
-            </ul>
         </div>
     )
 };

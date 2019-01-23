@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from "react-redux";
 import * as d3 from "d3";
+import { API_FUNC_LIST } from "../../constants/index"
 
 class LineChart extends Component {
     constructor(props) {
@@ -50,16 +51,20 @@ class LineChart extends Component {
             .attr("stroke", "#ffab00")
             .attr("stroke-width", "1px");
         
-        var parseTime = d3.timeParse("%Y-%m-%d");
-
-        return [x, y, xAxis, yAxis, line, path, parseTime]
-    }
-
+            return [x, y, xAxis, yAxis, line, path]
+        }
+        
     update() {
         var [x, y, xAxis, yAxis, line, path, parseTime] = this.chart;
+        var { detail, func } = this.props;
+
+        var parseTime = d3.timeParse("%Y-%m-%d");
+        if (func === API_FUNC_LIST[0]) {
+            parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+        }
 
         // Process data
-        var dataset = this.props.detail ? d3.entries(this.props.detail.data) : [];
+        var dataset = detail ? d3.entries(detail.data) : [];
         dataset.forEach(d => {
             d.key = parseTime(d.key) // Str to Date
             for (var type in d.value) {
@@ -87,7 +92,7 @@ class LineChart extends Component {
     }
 }
 const mapStateToProps = state => {
-    return { detail: state.detail };
+    return { detail: state.detail, func: state.func };
 };
 
 export default connect(mapStateToProps)(LineChart);
