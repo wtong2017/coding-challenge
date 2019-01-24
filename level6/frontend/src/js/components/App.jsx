@@ -1,21 +1,22 @@
 import React from "react";
 // import List from "./List.jsx";
-import Form from "./Form.jsx";
+import Nav from "./Nav.jsx";
 import Post from "./Post.jsx";
+import Loader from "./Loader.jsx"
 
 const App = () => (
-    <div className="row mt-5">
-        {/* <div className="col-md-4 offset-md-1">
-            <h2>Stocks in database</h2>
-            <List />
-        </div> */}
-        <div className="col-md-4 offset-md-1">
-            <h2>Search for stocks</h2>
-            <Form />
-        </div>
-        <div className="col-md-4 offset-md-1">
-            <h2>Details</h2>
-            <Post />
+    <div>
+        <Nav />
+        <div style={{position: "relative"}}>
+            <Loader />
+            <div className="container">
+                <div className="row">
+                    <div className="col-md-12 mt-5">
+                        <h2>Details</h2>
+                        <Post />
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 );

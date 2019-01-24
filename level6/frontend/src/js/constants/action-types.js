@@ -1,4 +1,4 @@
-export const DATA_LOADED = "DATA_LOADED";
 export const SELECT_STOCK = "SELECT_STOCK";
-export const DETAIL_LOADED = "DETAIL_LOADED";
 export const SELECT_FUNC = "SELECT_FUNC";
+export const GET_DETAIL_SUCCESS = "GET_DETAIL_SUCCESS";
+export const GET_DETAIL = "GET_DETAIL";
